@@ -51,7 +51,8 @@ public class EnginesConfiguration {
 
     @Bean
     public VerbsManager verbsManager() {
-        return new VerbsManager(scriptsConfiguration.scriptInterpreter());
+        return new VerbsManager(scriptsConfiguration.scriptInterpreter(),
+                scriptsConfiguration.graalScriptEngineFactory());
     }
 
     @Bean

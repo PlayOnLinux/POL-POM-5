@@ -145,19 +145,34 @@ public class ContainerVerbsPanelSkin extends SkinBase<ContainerVerbsPanel, Conta
     private void updateVerbs(final GridPane verbs) {
         verbs.getChildren().clear();
 
+        String engineId = getControl().getContainer().getEngine();
+        String container = getControl().getContainer().getName();
+
         for (ScriptDTO verb : getControl().getVerbScripts()) {
+            final boolean alreadyInstalled = getControl().getVerbsManager()
+                    .isVerbInstalled(engineId, verb.getId(), container);
+
             final int row = verbs.getRowCount();
 
             final CheckBox verbCheck = new CheckBox();
-            verbCheck.disableProperty().bind(getControl().lockVerbsProperty());
+            if (alreadyInstalled) {
+                verbCheck.setDisable(true);
+            } else {
+                verbCheck.disableProperty().bind(getControl().lockVerbsProperty());
+            }
 
             final Label verbName = new Label(verb.getScriptName());
             // select the associated checkbox if the label has been clicked
             verbName.setOnMouseClicked(event -> verbCheck.fire());
 
-            GridPane.setHgrow(verbName, Priority.ALWAYS);
+            final Label installedLabel = new Label();
+            if (alreadyInstalled) {
+                installedLabel.setText(tr("Already Installed"));
+            }
 
-            verbs.addRow(row, verbCheck, verbName);
+            GridPane.setHgrow(installedLabel, Priority.ALWAYS);
+
+            verbs.addRow(row, verbCheck, verbName, installedLabel);
         }
     }
 }

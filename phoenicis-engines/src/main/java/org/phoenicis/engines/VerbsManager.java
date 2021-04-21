@@ -23,6 +23,8 @@ import org.phoenicis.repository.dto.ApplicationDTO;
 import org.phoenicis.repository.dto.CategoryDTO;
 import org.phoenicis.repository.dto.RepositoryDTO;
 import org.phoenicis.repository.dto.TypeDTO;
+import org.phoenicis.scripts.engine.PhoenicisScriptEngineFactory;
+import org.phoenicis.scripts.engine.implementation.PhoenicisScriptEngine;
 import org.phoenicis.scripts.exceptions.ScriptException;
 import org.phoenicis.scripts.interpreter.ScriptInterpreter;
 import org.phoenicis.scripts.session.InteractiveScriptSession;
@@ -39,13 +41,17 @@ import java.util.function.Consumer;
 public class VerbsManager {
     private final ScriptInterpreter scriptInterpreter;
 
+    private final PhoenicisScriptEngineFactory scriptEngineFactory;
+
     /**
      * Constructor
      *
      * @param scriptInterpreter The underlying script interpreter
+     * @param scriptEngineFactory
      */
-    public VerbsManager(ScriptInterpreter scriptInterpreter) {
+    public VerbsManager(ScriptInterpreter scriptInterpreter, PhoenicisScriptEngineFactory scriptEngineFactory) {
         this.scriptInterpreter = scriptInterpreter;
+        this.scriptEngineFactory = scriptEngineFactory;
     }
 
     /**
@@ -126,5 +132,18 @@ public class VerbsManager {
             }
         }
         callback.accept(verbs);
+    }
+
+    public boolean isVerbInstalled(String engineId, String verbId, String container) {
+        final PhoenicisScriptEngine scriptEngine = scriptEngineFactory.createEngine();
+
+        final String include = String.format("include(\"engines.%s.engine.implementation\");", engineId);
+
+        final Value engineClass = (Value) scriptEngine.evalAndReturn(include, exception -> {
+        });
+
+        final Engine engine = engineClass.newInstance().as(Engine.class);
+
+        return engine.isVerbRegistered(verbId, container);
     }
 }
