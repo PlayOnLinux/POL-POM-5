@@ -31,6 +31,7 @@ import org.phoenicis.tools.processes.ProcessUtils;
 import org.phoenicis.tools.system.ArchitectureFetcher;
 import org.phoenicis.tools.system.OperatingSystemFetcher;
 import org.phoenicis.tools.system.ScreenManager;
+import org.phoenicis.tools.system.GraphicsPropertiesFetcher;
 import org.phoenicis.tools.system.SystemConfiguration;
 import org.phoenicis.tools.system.opener.AutomaticOpener;
 import org.phoenicis.tools.system.opener.Opener;
@@ -166,5 +167,10 @@ public class ToolsConfiguration {
     @Bean
     public ScreenManager screenManager() {
         return new ScreenManager();
+    }
+
+    @Bean
+    public GraphicsPropertiesFetcher graphicsPropertiesFetcher() {
+        return new GraphicsPropertiesFetcher();
     }
 }
