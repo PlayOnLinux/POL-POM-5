@@ -18,23 +18,24 @@
 
 package org.phoenicis.javafx;
 
+import com.github.jankroken.commandline.CommandLineParser;
+import com.github.jankroken.commandline.OptionStyle;
 import javafx.application.Application;
 import javafx.scene.image.Image;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
-import org.phoenicis.javafx.controller.MainController;
-import org.phoenicis.multithreading.ControlledThreadPoolExecutorServiceCloser;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 
 public class JavaFXApplication extends Application {
     private final static Logger LOGGER = LoggerFactory.getLogger(JavaFXApplication.class);
 
     public static void main(String[] args) {
         try {
-            Application.launch(JavaFXApplication.class);
+            Application.launch(args);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -45,19 +46,18 @@ public class JavaFXApplication extends Application {
         primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("views/common/phoenicis.png")));
         primaryStage.setTitle("Phoenicis");
         loadFonts();
-        ConfigurableApplicationContext applicationContext = new AnnotationConfigApplicationContext(
-                AppConfiguration.class);
 
-        final MainController mainController = applicationContext.getBean(MainController.class);
-        mainController.show();
-        mainController.setOnClose(() -> {
-            try {
-                applicationContext.getBean(ControlledThreadPoolExecutorServiceCloser.class).setCloseImmediately(true);
-                applicationContext.close();
-            } catch (Exception e) {
-                LOGGER.warn("Exception while closing the application.", e);
-            }
-        });
+        try {
+            final List<String> parameters = getParameters().getRaw();
+            String[] parametersArray = new String[parameters.size()];
+            parametersArray = parameters.toArray(parametersArray);
+            final CLIController arguments = CommandLineParser.parse(CLIController.class,
+                    parametersArray, OptionStyle.SIMPLE);
+
+            arguments.close();
+        } catch (IllegalAccessException | InstantiationException | InvocationTargetException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void loadFonts() {
