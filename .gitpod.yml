@@ -11,5 +11,6 @@ tasks:
 - init: >
     mvn install
   command: >
-    cd phoenicis-javafx/ &&
-    mvn exec:java
+    mvn clean package &&
+    cd phoenicis-dist/src/scripts &&
+    sh phoenicis-create-package.sh
