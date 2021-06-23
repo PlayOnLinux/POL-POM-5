@@ -146,50 +146,61 @@ public class LibraryFeaturePanel extends FeaturePanel<LibraryFeaturePanel, Libra
         // get container
         // TODO: smarter way using container manager
         final String executablePath = shortcutCreationDTO.getExecutable().getAbsolutePath();
-        final String pathInContainers = executablePath.replace(getContainersPath(), "");
-        final String[] split = pathInContainers.split("/");
-        final String engineContainer = split[0];
-        final String engine = StringUtils.capitalize(engineContainer).replace("prefix", "");
-        // TODO: better way to get engine ID
-        final String engineId = engine.toLowerCase();
-        final String container = split[1];
+        if (!executablePath.startsWith(getContainersPath())) {
+            Platform.runLater(() -> {
+                final ErrorDialog errorDialog = ErrorDialog.builder()
+                        .withMessage(tr("Creating shortcut to executable outside of a container is not supported"))
+                        .withOwner(getScene().getWindow())
+                        .build();
 
-        final InteractiveScriptSession interactiveScriptSession = getScriptInterpreter().createInteractiveSession();
+                errorDialog.showAndWait();
+            });
+        } else {
+            final String pathInContainers = executablePath.replace(getContainersPath(), "");
+            final String[] split = pathInContainers.split("/");
+            final String engineContainer = split[0];
+            final String engine = StringUtils.capitalize(engineContainer).replace("prefix", "");
+            // TODO: better way to get engine ID
+            final String engineId = engine.toLowerCase();
+            final String container = split[1];
 
-        final String scriptInclude = "const Shortcut = include(\"engines." + engineId + ".shortcuts." + engineId
-                + "\");";
+            final InteractiveScriptSession interactiveScriptSession = getScriptInterpreter().createInteractiveSession();
 
-        interactiveScriptSession.eval(scriptInclude,
-                ignored -> interactiveScriptSession.eval("new Shortcut()",
-                        output -> {
-                            final Value shortcutObject = (Value) output;
+            final String scriptInclude = "const Shortcut = include(\"engines." + engineId + ".shortcuts." + engineId
+                    + "\");";
 
-                            shortcutObject.invokeMember("name", shortcutCreationDTO.getName());
-                            shortcutObject.invokeMember("category", shortcutCreationDTO.getCategory());
-                            shortcutObject.invokeMember("description", shortcutCreationDTO.getDescription());
-                            shortcutObject.invokeMember("miniature", shortcutCreationDTO.getMiniature());
-                            shortcutObject.invokeMember("search", shortcutCreationDTO.getExecutable().getName());
-                            shortcutObject.invokeMember("prefix", container);
-                            shortcutObject.invokeMember("create");
-                        },
-                        e -> Platform.runLater(() -> {
-                            final ErrorDialog errorDialog = ErrorDialog.builder()
-                                    .withMessage(tr("Error while creating shortcut"))
-                                    .withException(e)
-                                    .withOwner(getScene().getWindow())
-                                    .build();
+            interactiveScriptSession.eval(scriptInclude,
+                    ignored -> interactiveScriptSession.eval("new Shortcut()",
+                            output -> {
+                                final Value shortcutObject = (Value) output;
 
-                            errorDialog.showAndWait();
-                        })),
-                e -> Platform.runLater(() -> {
-                    final ErrorDialog errorDialog = ErrorDialog.builder()
-                            .withMessage(tr("Error while creating shortcut"))
-                            .withException(e)
-                            .withOwner(getScene().getWindow())
-                            .build();
+                                shortcutObject.invokeMember("name", shortcutCreationDTO.getName());
+                                shortcutObject.invokeMember("category", shortcutCreationDTO.getCategory());
+                                shortcutObject.invokeMember("description", shortcutCreationDTO.getDescription());
+                                shortcutObject.invokeMember("miniature", shortcutCreationDTO.getMiniature());
+                                shortcutObject.invokeMember("search", shortcutCreationDTO.getExecutable().getName());
+                                shortcutObject.invokeMember("prefix", container);
+                                shortcutObject.invokeMember("create");
+                            },
+                            e -> Platform.runLater(() -> {
+                                final ErrorDialog errorDialog = ErrorDialog.builder()
+                                        .withMessage(tr("Error while creating shortcut"))
+                                        .withException(e)
+                                        .withOwner(getScene().getWindow())
+                                        .build();
 
-                    errorDialog.showAndWait();
-                }));
+                                errorDialog.showAndWait();
+                            })),
+                    e -> Platform.runLater(() -> {
+                        final ErrorDialog errorDialog = ErrorDialog.builder()
+                                .withMessage(tr("Error while creating shortcut"))
+                                .withException(e)
+                                .withOwner(getScene().getWindow())
+                                .build();
+
+                        errorDialog.showAndWait();
+                    }));
+        }
     }
 
     /**
