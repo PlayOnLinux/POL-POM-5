@@ -1,46 +1,22 @@
 package org.phoenicis.scripts.engine;
 
+import org.graalvm.polyglot.Value;
+import org.phoenicis.scripts.engine.implementation.GraalEngineType;
 import org.phoenicis.scripts.engine.implementation.PhoenicisScriptEngine;
-import org.phoenicis.scripts.engine.implementation.PolyglotScriptEngine;
-
-import java.util.Map;
 
 /**
- * The supported script engine types
+ * A script engine type supported by Phoenicis
+ *
+ * @param <T> The internal script result type used by the script engine
  */
-public enum ScriptEngineType {
-    GRAAL("graal.js") {
-        @Override
-        public PhoenicisScriptEngine createScriptEngine() {
-            return new PolyglotScriptEngine("js",
-                    Map.of("js.nashorn-compat", "true",
-                            "js.experimental-foreign-object-prototype", "true"));
-        }
-    };
+public interface ScriptEngineType<T> {
+    // convenience instance
+    ScriptEngineType<Value> GRAAL = new GraalEngineType();
 
     /**
-     * The name of the script engine type
-     */
-    private final String name;
-
-    /**
-     * Constructor
+     * Creates a new script engine
      *
-     * @param name The name of the script engine type
+     * @return The created script engine
      */
-    ScriptEngineType(String name) {
-        this.name = name;
-    }
-
-    /**
-     * Creates a new instance of the {@link ScriptEngineType}
-     *
-     * @return The new instance of the {@link ScriptEngineType}
-     */
-    public abstract PhoenicisScriptEngine createScriptEngine();
-
-    @Override
-    public String toString() {
-        return this.name;
-    }
+    PhoenicisScriptEngine<T> createScriptEngine();
 }

@@ -1,5 +1,6 @@
 package org.phoenicis.scripts.engine.injectors;
 
+import org.graalvm.polyglot.Value;
 import org.phoenicis.configuration.security.Safe;
 import org.phoenicis.scripts.engine.implementation.PhoenicisScriptEngine;
 import org.springframework.context.ApplicationContext;
@@ -10,7 +11,7 @@ import java.util.function.Function;
 /**
  * Injects Bean() function into a Script Engine
  */
-public class BeanInjector implements EngineInjector {
+public class BeanInjector implements EngineInjector<Value> {
     private final ApplicationContext applicationContext;
 
     public BeanInjector(ApplicationContext applicationContext) {
@@ -19,7 +20,7 @@ public class BeanInjector implements EngineInjector {
 
     @Override
     public void injectInto(PhoenicisScriptEngine phoenicisScriptEngine) {
-        phoenicisScriptEngine.put("Bean", (Function<String, Object>) this::fetchBean, this::throwException);
+        phoenicisScriptEngine.put("Bean", (Function<String, Object>) this::fetchBean);
     }
 
     private Object fetchBean(String beanName) {
@@ -32,7 +33,7 @@ public class BeanInjector implements EngineInjector {
             }
         }
 
-        throw new IllegalAccessError(String.format("You are not allowed to instanciate %s (of class %s) from a script.",
+        throw new IllegalAccessError(String.format("You are not allowed to instantiate %s (of class %s) from a script.",
                 beanName, beanClass.getName()));
     }
 }

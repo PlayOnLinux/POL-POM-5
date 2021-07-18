@@ -18,23 +18,25 @@
 
 package org.phoenicis.scripts.engine.implementation;
 
-import com.google.common.util.concurrent.Runnables;
+/**
+ * A script engine used by Phoenicis
+ *
+ * @param <R> The internal script result type
+ */
+public interface PhoenicisScriptEngine<R> {
+    /**
+     * Sets a global value for the given key (variable) in the script context
+     *
+     * @param key   The variable name in the script context
+     * @param value The corresponding value
+     */
+    void put(String key, Object value);
 
-import java.io.InputStreamReader;
-import java.util.function.Consumer;
-
-public interface PhoenicisScriptEngine {
-    void eval(InputStreamReader inputStreamReader, Consumer<Exception> errorCallback);
-
-    void eval(String script, Runnable doneCallback, Consumer<Exception> errorCallback);
-
-    default void eval(String script, Consumer<Exception> errorCallback) {
-        eval(script, Runnables.doNothing(), errorCallback);
-    }
-
-    Object evalAndReturn(String line, Consumer<Exception> errorCallback);
-
-    void put(String name, Object object, Consumer<Exception> errorCallback);
-
-    void addErrorHandler(Consumer<Exception> errorHandler);
+    /**
+     * Evaluates the given script and returns its result
+     *
+     * @param script The script
+     * @return The result of the evaluated script
+     */
+    R evaluate(String script);
 }

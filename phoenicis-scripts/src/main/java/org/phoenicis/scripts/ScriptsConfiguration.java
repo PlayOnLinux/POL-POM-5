@@ -21,10 +21,10 @@ package org.phoenicis.scripts;
 import org.phoenicis.multithreading.MultithreadingConfiguration;
 import org.phoenicis.repository.RepositoryConfiguration;
 import org.phoenicis.scripts.engine.PhoenicisScriptEngineFactory;
-import org.phoenicis.scripts.interpreter.PhoenicisScriptInterpreter;
 import org.phoenicis.scripts.engine.ScriptEngineType;
 import org.phoenicis.scripts.engine.injectors.*;
 import org.phoenicis.scripts.interpreter.BackgroundScriptInterpreter;
+import org.phoenicis.scripts.interpreter.PhoenicisScriptInterpreter;
 import org.phoenicis.scripts.interpreter.ScriptFetcher;
 import org.phoenicis.scripts.interpreter.ScriptInterpreter;
 import org.phoenicis.scripts.wizard.WizardConfiguration;
@@ -34,7 +34,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
-import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @Import(WizardConfiguration.class)
@@ -52,10 +52,12 @@ public class ScriptsConfiguration {
     private MultithreadingConfiguration multithreadingConfiguration;
 
     @Bean
-    public PhoenicisScriptEngineFactory graalScriptEngineFactory() {
-        return new PhoenicisScriptEngineFactory(ScriptEngineType.GRAAL, Arrays.asList(new ScriptUtilitiesInjector(),
+    public PhoenicisScriptEngineFactory<org.graalvm.polyglot.Value> graalScriptEngineFactory() {
+        final List<EngineInjector<org.graalvm.polyglot.Value>> injectors = List.of(new ScriptUtilitiesInjector(),
                 new BeanInjector(applicationContext), new SetupWizardInjector(wizardConfiguration.setupWizardFactory()),
-                new IncludeInjector(scriptFetcher()), new LocalisationInjector()));
+                new IncludeInjector(scriptFetcher()), new LocalisationInjector());
+
+        return new PhoenicisScriptEngineFactory<>(ScriptEngineType.GRAAL, injectors);
     }
 
     @Bean

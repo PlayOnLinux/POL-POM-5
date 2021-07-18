@@ -1,25 +1,14 @@
 package org.phoenicis.scripts.engine.implementation;
 
-import com.google.common.util.concurrent.Runnables;
-import org.apache.commons.io.IOUtils;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 /**
  * A {@link PhoenicisScriptEngine} wrapping around a polyglot {@link Context} object defined by Graal
  */
-public class PolyglotScriptEngine implements PhoenicisScriptEngine {
-    /**
-     * A list of error handlers
-     */
-    private final List<Consumer<Exception>> errorHandlers;
-
+public class PolyglotScriptEngine implements PhoenicisScriptEngine<Value> {
     /**
      * The scripting language
      */
@@ -34,12 +23,11 @@ public class PolyglotScriptEngine implements PhoenicisScriptEngine {
      * Constructor
      *
      * @param language The language name
-     * @param options A map of options for the Polyglot context
+     * @param options  A map of options for the Polyglot context
      */
     public PolyglotScriptEngine(String language, Map<String, String> options) {
         super();
 
-        this.errorHandlers = new ArrayList<>();
         this.language = language;
         this.context = Context.newBuilder(language)
                 .allowExperimentalOptions(true)
@@ -48,51 +36,12 @@ public class PolyglotScriptEngine implements PhoenicisScriptEngine {
     }
 
     @Override
-    public void eval(InputStreamReader inputStreamReader, Consumer<Exception> errorCallback) {
-        try {
-            String script = IOUtils.toString(inputStreamReader);
-
-            eval(script, Runnables.doNothing(), errorCallback);
-        } catch (IOException ioe) {
-            handleError(errorCallback, ioe);
-        }
+    public void put(String key, Object value) {
+        this.context.getBindings(this.language).putMember(key, value);
     }
 
     @Override
-    public void eval(String script, Runnable doneCallback, Consumer<Exception> errorCallback) {
-        try {
-            this.context.eval(this.language, script);
-        } catch (Exception e) {
-            handleError(errorCallback, e);
-        }
-    }
-
-    @Override
-    public Object evalAndReturn(String script, Consumer<Exception> errorCallback) {
-        try {
-            return this.context.eval(this.language, script);
-        } catch (Exception e) {
-            handleError(errorCallback, e);
-
-            return "";
-        }
-    }
-
-    @Override
-    public void put(String name, Object object, Consumer<Exception> errorCallback) {
-        this.context.getBindings(this.language).putMember(name, object);
-    }
-
-    @Override
-    public void addErrorHandler(Consumer<Exception> errorHandler) {
-        this.errorHandlers.add(errorHandler);
-    }
-
-    private void handleError(Consumer<Exception> errorCallback, Exception e) {
-        for (Consumer<Exception> errorHandler : this.errorHandlers) {
-            errorHandler.accept(e);
-        }
-
-        errorCallback.accept(e);
+    public Value evaluate(String script) {
+        return this.context.eval(this.language, script);
     }
 }

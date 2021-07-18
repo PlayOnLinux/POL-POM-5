@@ -18,9 +18,13 @@
 
 package org.phoenicis.engines;
 
+import org.graalvm.polyglot.Value;
 import org.phoenicis.configuration.PhoenicisGlobalConfiguration;
 import org.phoenicis.multithreading.MultithreadingConfiguration;
 import org.phoenicis.scripts.ScriptsConfiguration;
+import org.phoenicis.scripts.engine.PhoenicisScriptEngineFactory;
+import org.phoenicis.scripts.engine.implementation.TypedScriptEngine;
+import org.phoenicis.scripts.engine.implementation.TypedScriptEngineFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,8 +49,16 @@ public class EnginesConfiguration {
 
     @Bean
     public EngineSettingsManager engineSettingsManager() {
-        return new EngineSettingsManager(scriptsConfiguration.graalScriptEngineFactory(),
-                multithreadingConfiguration.scriptExecutorService());
+        final PhoenicisScriptEngineFactory<Value> scriptEngineFactory = scriptsConfiguration.graalScriptEngineFactory();
+        final TypedScriptEngineFactory factory = new TypedScriptEngineFactory() {
+            @Override
+            public <T> TypedScriptEngine<T> createScriptEngine(Class<T> type) {
+                //noinspection unchecked
+                return (TypedScriptEngine<T>) new EngineSettingScriptEngine(scriptEngineFactory.createEngine());
+            }
+        };
+
+        return new EngineSettingsManager(factory, multithreadingConfiguration.scriptExecutorService());
     }
 
     @Bean

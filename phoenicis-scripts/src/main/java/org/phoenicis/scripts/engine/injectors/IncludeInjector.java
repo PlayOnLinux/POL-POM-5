@@ -16,7 +16,7 @@ import java.util.function.Function;
 /**
  * Injects Include() function into a Script Engine
  */
-public class IncludeInjector implements EngineInjector {
+public class IncludeInjector implements EngineInjector<Value> {
     private final ScriptFetcher scriptFetcher;
 
     public IncludeInjector(ScriptFetcher scriptFetcher) {
@@ -24,11 +24,11 @@ public class IncludeInjector implements EngineInjector {
     }
 
     @Override
-    public void injectInto(PhoenicisScriptEngine phoenicisScriptEngine) {
+    public void injectInto(PhoenicisScriptEngine<Value> phoenicisScriptEngine) {
         // store scripts that are currently in progress
         final Stack<String> includeStack = new Stack<>();
         // store included scripts (include path -> JS object)
-        final Map<String, Object> includedScripts = new HashMap<>();
+        final Map<String, Value> includedScripts = new HashMap<>();
 
         phoenicisScriptEngine.put("include", (Function<String, Object>) argument -> {
             // prevent circular includes
@@ -47,11 +47,10 @@ public class IncludeInjector implements EngineInjector {
                 try {
                     // wrap the loaded script in a function to prevent it from influencing the main script
                     String extendedString = String.format("(module) => { %s }", script);
-                    Value includeFunction = (Value) phoenicisScriptEngine.evalAndReturn(extendedString,
-                            this::throwException);
+                    Value includeFunction = phoenicisScriptEngine.evaluate(extendedString);
 
                     // create an empty JS object
-                    Value module = (Value) phoenicisScriptEngine.evalAndReturn("({})", this::throwException);
+                    Value module = phoenicisScriptEngine.evaluate("({})");
 
                     // execute the included function -> populates "module"
                     includeFunction.execute(module);
@@ -69,6 +68,6 @@ public class IncludeInjector implements EngineInjector {
             includeStack.pop();
 
             return includedScripts.get(argument);
-        }, this::throwException);
+        });
     }
 }

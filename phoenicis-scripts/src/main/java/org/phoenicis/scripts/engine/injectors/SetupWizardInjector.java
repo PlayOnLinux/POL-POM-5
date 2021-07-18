@@ -1,5 +1,6 @@
 package org.phoenicis.scripts.engine.injectors;
 
+import org.graalvm.polyglot.Value;
 import org.phoenicis.scripts.TriFunction;
 import org.phoenicis.scripts.engine.implementation.PhoenicisScriptEngine;
 import org.phoenicis.scripts.ui.InstallationType;
@@ -12,7 +13,7 @@ import java.util.Optional;
 /**
  * Injects SetupWizard() function into a script engine
  */
-public class SetupWizardInjector implements EngineInjector {
+public class SetupWizardInjector implements EngineInjector<Value> {
     private final UiSetupWizardFactory uiSetupWizardFactory;
 
     public SetupWizardInjector(UiSetupWizardFactory uiSetupWizardFactory) {
@@ -20,18 +21,13 @@ public class SetupWizardInjector implements EngineInjector {
     }
 
     @Override
-    public void injectInto(PhoenicisScriptEngine phoenicisScriptEngine) {
-        phoenicisScriptEngine.eval(
-                "var InstallationType = Java.type(\"" + InstallationType.class.getCanonicalName() + "\")",
-                this::throwException);
-        phoenicisScriptEngine.put("SetupWizard",
-                (TriFunction<InstallationType, String, Optional<URI>, UiSetupWizardImplementation>) (installationType,
-                        name, miniature) -> {
-                    final UiSetupWizardImplementation uiSetupWizardImplementation = uiSetupWizardFactory.create(name,
-                            miniature, installationType);
-                    phoenicisScriptEngine.addErrorHandler(e -> uiSetupWizardImplementation.close());
-                    return uiSetupWizardImplementation;
-                },
-                this::throwException);
+    public void injectInto(PhoenicisScriptEngine<Value> phoenicisScriptEngine) {
+        final String installationTypeScript = String.format("var InstallationType = Java.type(\"%s\")", InstallationType.class.getCanonicalName());
+
+        // define installation type class
+        phoenicisScriptEngine.evaluate(installationTypeScript);
+
+        phoenicisScriptEngine.put("SetupWizard", (TriFunction<InstallationType, String, Optional<URI>, UiSetupWizardImplementation>)
+                (installationType, name, miniature) -> uiSetupWizardFactory.create(name, miniature, installationType));
     }
 }

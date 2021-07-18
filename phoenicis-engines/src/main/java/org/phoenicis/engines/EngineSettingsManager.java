@@ -18,12 +18,12 @@
 
 package org.phoenicis.engines;
 
-import org.graalvm.polyglot.Value;
 import org.phoenicis.repository.dto.ApplicationDTO;
 import org.phoenicis.repository.dto.CategoryDTO;
 import org.phoenicis.repository.dto.RepositoryDTO;
-import org.phoenicis.scripts.engine.PhoenicisScriptEngineFactory;
-import org.phoenicis.scripts.engine.implementation.PhoenicisScriptEngine;
+import org.phoenicis.scripts.engine.implementation.TypedScriptEngine;
+import org.phoenicis.scripts.engine.implementation.TypedScriptEngineFactory;
+import org.phoenicis.scripts.exceptions.ScriptException;
 
 import java.util.List;
 import java.util.Map;
@@ -35,20 +35,20 @@ import java.util.stream.Collectors;
  * Manages the engine settings
  */
 public class EngineSettingsManager {
-    private final PhoenicisScriptEngineFactory phoenicisScriptEngineFactory;
+    private final TypedScriptEngineFactory typedScriptEngineFactory;
     private final ExecutorService executorService;
 
     /**
      * Constructor
      *
-     * @param phoenicisScriptEngineFactory The used script engine factory
-     * @param executorService The executor service to allow for parallelization
+     * @param typedScriptEngineFactory The used script engine factory
+     * @param executorService          The executor service to allow for parallelization
      */
-    public EngineSettingsManager(PhoenicisScriptEngineFactory phoenicisScriptEngineFactory,
-            ExecutorService executorService) {
+    public EngineSettingsManager(TypedScriptEngineFactory typedScriptEngineFactory,
+                                 ExecutorService executorService) {
         super();
 
-        this.phoenicisScriptEngineFactory = phoenicisScriptEngineFactory;
+        this.typedScriptEngineFactory = typedScriptEngineFactory;
         this.executorService = executorService;
     }
 
@@ -56,28 +56,31 @@ public class EngineSettingsManager {
      * Fetches the available engine settings
      *
      * @param repositoryDTO The repository containing the engine settings
-     * @param callback The callback which recieves the found engine settings
+     * @param callback      The callback which recieves the found engine settings
      * @param errorCallback The callback which will be executed if an error occurs
      */
     public void fetchAvailableEngineSettings(RepositoryDTO repositoryDTO,
-            Consumer<Map<String, List<EngineSetting>>> callback, Consumer<Exception> errorCallback) {
+                                             Consumer<Map<String, List<EngineSetting>>> callback, Consumer<Exception> errorCallback) {
         executorService.execute(() -> {
             final List<SettingConfig> configurations = fetchSettingConfigurations(repositoryDTO);
 
             // the script engine needs to be created inside the correct thread otherwise GraalJS throws an error
-            final PhoenicisScriptEngine phoenicisScriptEngine = phoenicisScriptEngineFactory.createEngine();
+            final TypedScriptEngine<EngineSetting> phoenicisScriptEngine = typedScriptEngineFactory.createScriptEngine(EngineSetting.class);
 
             final Map<String, List<EngineSetting>> result = configurations.stream()
                     .collect(Collectors.groupingBy(
                             configuration -> configuration.engineId,
                             Collectors.mapping(configuration -> {
-                                final String include = String.format("include(\"engines.%s.settings.%s\");",
-                                        configuration.engineId, configuration.settingId);
+                                final String scriptId = String.format("engines.%s.settings.%s", configuration.engineId, configuration.settingId);
 
-                                final Value settingClass = (Value) phoenicisScriptEngine.evalAndReturn(include,
-                                        errorCallback);
+                                try {
+                                    return phoenicisScriptEngine.evaluate(scriptId);
+                                } catch (ScriptException se) {
+                                    errorCallback.accept(se);
 
-                                return settingClass.newInstance().as(EngineSetting.class);
+                                    // rethrow exception
+                                    throw se;
+                                }
                             }, Collectors.toList())));
 
             callback.accept(result);
@@ -122,7 +125,7 @@ public class EngineSettingsManager {
                 .collect(Collectors.toList());
     }
 
-    private class EngineInformation {
+    private static class EngineInformation {
         public final String engineId;
 
         public final ApplicationDTO application;
@@ -133,7 +136,7 @@ public class EngineSettingsManager {
         }
     }
 
-    private class SettingConfig {
+    private static class SettingConfig {
         public final String engineId;
 
         public final String settingId;
