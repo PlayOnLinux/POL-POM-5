@@ -8,6 +8,8 @@
 #
 
 VERSION="$1"
+JAVA_VERSION="$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)"
+
 
 if [ "$VERSION" = "" ]; then
     echo "Warning: Version not specified. Reading from pom.xml"
@@ -20,6 +22,9 @@ cd "$SCRIPT_PATH"
 SCRIPT_PATH="$PWD"
 
 [ "$JAVA_HOME" = "" ] && echo "Please set JAVA_HOME" && exit 0
+[ ! "$JAVA_VERSION" = "14" ] && (echo "Java 14 is required to run this script" ; exit 1)
+which jpackage || (echo "jpackage is required to run this script" ; exit 1)
+
 
 PHOENICIS_OPERATING_SYSTEM="$(uname)"
 
@@ -27,12 +32,14 @@ if [ "$PHOENICIS_OPERATING_SYSTEM" == "Darwin" ]; then
     PHOENICIS_APPTITLE="Phoenicis PlayOnMac"
     JPACKAGER_OS="osx"
     JAR_RELATIVE_PATH="../Java"
+    TYPE="DMG"
 fi
 
 if [ "$PHOENICIS_OPERATING_SYSTEM" == "Linux" ]; then
     PHOENICIS_APPTITLE="Phoenicis PlayOnLinux"
     JPACKAGER_OS="linux"
     JAR_RELATIVE_PATH="/usr/share/phoenicis/app"
+    TYPE="DEB"
 fi
 
 PHOENICIS_TARGET="$SCRIPT_PATH/../../target"
@@ -40,34 +47,19 @@ PHOENICIS_JPACKAGER="$SCRIPT_PATH/../../target/jpackager"
 PHOENICIS_RESOURCES="$SCRIPT_PATH/../resources"
 PHOENICIS_MODULES="jdk.crypto.ec,java.base,javafx.base,javafx.web,javafx.media,javafx.graphics,javafx.controls,java.naming,java.sql,java.scripting,jdk.internal.vm.ci,jdk.internal.vm.compiler,org.graalvm.truffle,jdk.jsobject,jdk.xml.dom"
 PHOENICIS_RUNTIME_OPTIONS="-XX:G1PeriodicGCInterval=5000 -XX:G1PeriodicGCSystemLoadThreshold=0 -XX:MaxHeapFreeRatio=10 -XX:MinHeapFreeRatio=5 -XX:-ShrinkHeapInSteps -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI --upgrade-module-path=$JAR_RELATIVE_PATH/compiler.jar --module-path=../Java --add-modules=$PHOENICIS_MODULES"
-PHOENICIS_JPACKAGER_ARGUMENTS=("-i" "$PHOENICIS_TARGET/lib" "--main-jar" "phoenicis-javafx-$VERSION.jar" "-n" "$PHOENICIS_APPTITLE" "--output" "$PHOENICIS_TARGET/packages/" "--add-modules" "$PHOENICIS_MODULES" "-p" "$PHOENICIS_TARGET/lib/" "--app-version" "$VERSION" "--java-options" "$PHOENICIS_RUNTIME_OPTIONS")
+PHOENICIS_JPACKAGER_ARGUMENTS=("--type" "$TYPE" "--input" "$PHOENICIS_TARGET/lib" "--main-jar" "phoenicis-javafx-$VERSION.jar" "-n" "$PHOENICIS_APPTITLE" "--dest" "$PHOENICIS_TARGET/packages/" "--add-modules" "$PHOENICIS_MODULES" "-p" "$PHOENICIS_TARGET/lib/" "--app-version" "$VERSION" "--java-options" "$PHOENICIS_RUNTIME_OPTIONS")
 
 
-_download_jpackager() {
-    mkdir -p "$PHOENICIS_JPACKAGER"
-    cd "$PHOENICIS_JPACKAGER"
-    wget https://download.java.net/java/early_access/jpackage/49/openjdk-13-jpackage+49_osx-x64_bin.tar.gz
-    tar -xvf openjdk-13-jpackage+49_osx-x64_bin.tar.gz
-}
-
-
-jpackager() {
-    if [ ! -e "$PHOENICIS_JPACKAGER/jdk-13.jdk/Contents/Home/bin" ]; then
-        _download_jpackager
-    fi
-
-    "$PHOENICIS_JPACKAGER/jdk-13.jdk/Contents/Home/bin/jpackage" "$@"
-}
 
 cd "$PHOENICIS_TARGET"
 
 if [ "$PHOENICIS_OPERATING_SYSTEM" == "Darwin" ]; then
     rm -rf "$PHOENICIS_TARGET/packages/Phoenicis PlayOnMac.app"
-    jpackager create-app-image --icon "$PHOENICIS_RESOURCES/Phoenicis PlayOnMac.icns" "${PHOENICIS_JPACKAGER_ARGUMENTS[@]}"
+    jpackage --icon "$PHOENICIS_RESOURCES/Phoenicis PlayOnMac.icns" "${PHOENICIS_JPACKAGER_ARGUMENTS[@]}"
 fi
 
 if [ "$PHOENICIS_OPERATING_SYSTEM" == "Linux" ]; then
-    jpackager create-image "${PHOENICIS_JPACKAGER_ARGUMENTS[@]}"  --linux-bundle-name "phoenicis-playonlinux"
+    jpackage "${PHOENICIS_JPACKAGER_ARGUMENTS[@]}"
 
     packageName="Phoenicis_$VERSION"
     cd "$PHOENICIS_TARGET"
